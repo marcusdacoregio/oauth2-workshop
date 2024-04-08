@@ -28,16 +28,15 @@ public class SecurityContextIdRedirectServerAuthenticationSuccessHandler impleme
 	}
 
 	private Mono<Void> performRedirect(WebFilterExchange exchange, Authentication authentication) {
-		ServerAuthenticationSuccessHandler delegate =
-			new RedirectServerAuthenticationSuccessHandler(buildRedirectUrl(exchange));
-
-		return delegate.onAuthenticationSuccess(exchange, authentication);
+		return exchange.getExchange().getSession()
+				.map((session) -> buildRedirectUrl(session.getId()))
+				.map(RedirectServerAuthenticationSuccessHandler::new)
+				.flatMap((handler) -> handler.onAuthenticationSuccess(exchange, authentication));
 	}
 
-	private String buildRedirectUrl(WebFilterExchange exchange) {
-		String securityContextId = exchange.getExchange().getAttribute(SECURITY_CONTEXT_ID_ATTR_NAME);
+	private String buildRedirectUrl(String sessionId) {
 		return UriComponentsBuilder.fromUriString(this.redirectUri)
-			.queryParam(this.parameterName, securityContextId)
+			.queryParam(this.parameterName, sessionId)
 			.build()
 			.toString();
 	}
